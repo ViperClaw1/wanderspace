@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -59,15 +59,35 @@ interface RouteMapProps {
 }
 
 export function RouteMap({ places, showRoute = false, className = "" }: RouteMapProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const validPlaces = useMemo(
     () => places.filter((p) => p.latitude && p.longitude),
     [places]
+  );
+
+  // Generate a stable key for the map based on place IDs
+  const mapKey = useMemo(
+    () => validPlaces.map((p) => p.id).join("-") || "empty",
+    [validPlaces]
   );
 
   if (validPlaces.length === 0) {
     return (
       <div className={`flex items-center justify-center bg-muted rounded-xl ${className}`}>
         <p className="text-muted-foreground">No location data available</p>
+      </div>
+    );
+  }
+
+  if (!isMounted) {
+    return (
+      <div className={`flex items-center justify-center bg-muted rounded-xl ${className}`} style={{ minHeight: "300px" }}>
+        <p className="text-muted-foreground">Loading map...</p>
       </div>
     );
   }
@@ -85,6 +105,7 @@ export function RouteMap({ places, showRoute = false, className = "" }: RouteMap
   return (
     <div className={`rounded-xl overflow-hidden shadow-card ${className}`}>
       <MapContainer
+        key={mapKey}
         center={center}
         zoom={13}
         style={{ height: "100%", width: "100%", minHeight: "300px" }}
