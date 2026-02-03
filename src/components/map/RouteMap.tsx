@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import { useEffect, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Place } from "@/lib/supabase";
@@ -34,11 +34,7 @@ const createNumberedIcon = (number: number) => {
   });
 };
 
-interface MapBoundsUpdaterProps {
-  places: Place[];
-}
-
-function MapBoundsUpdater({ places }: MapBoundsUpdaterProps) {
+function MapUpdater({ places }: { places: Place[] }) {
   const map = useMap();
 
   useEffect(() => {
@@ -46,7 +42,7 @@ function MapBoundsUpdater({ places }: MapBoundsUpdaterProps) {
       const validPlaces = places.filter((p) => p.latitude && p.longitude);
       if (validPlaces.length > 0) {
         const bounds = L.latLngBounds(
-          validPlaces.map((p) => [p.latitude!, p.longitude!])
+          validPlaces.map((p) => [p.latitude!, p.longitude!] as [number, number])
         );
         map.fitBounds(bounds, { padding: [50, 50] });
       }
@@ -63,7 +59,10 @@ interface RouteMapProps {
 }
 
 export function RouteMap({ places, showRoute = false, className = "" }: RouteMapProps) {
-  const validPlaces = places.filter((p) => p.latitude && p.longitude);
+  const validPlaces = useMemo(
+    () => places.filter((p) => p.latitude && p.longitude),
+    [places]
+  );
 
   if (validPlaces.length === 0) {
     return (
@@ -88,37 +87,31 @@ export function RouteMap({ places, showRoute = false, className = "" }: RouteMap
       <MapContainer
         center={center}
         zoom={13}
-        style={{ height: "100%", width: "100%" }}
+        style={{ height: "100%", width: "100%", minHeight: "300px" }}
         scrollWheelZoom={true}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapBoundsUpdater places={validPlaces} />
-
+        <MapUpdater places={validPlaces} />
         {validPlaces.map((place, index) => (
           <Marker
             key={place.id}
             position={[place.latitude!, place.longitude!]}
             icon={showRoute ? createNumberedIcon(index + 1) : undefined}
-          >
-            <Popup>
-              <div className="p-1">
-                <h3 className="font-semibold text-sm">{place.name}</h3>
-                <p className="text-xs text-muted-foreground">{place.category}</p>
-              </div>
-            </Popup>
-          </Marker>
+            title={place.name}
+          />
         ))}
-
         {showRoute && validPlaces.length > 1 && (
           <Polyline
             positions={routeCoordinates}
-            color="hsl(174, 62%, 40%)"
-            weight={4}
-            opacity={0.7}
-            dashArray="10, 10"
+            pathOptions={{
+              color: "#2a9d8f",
+              weight: 4,
+              opacity: 0.7,
+              dashArray: "10, 10",
+            }}
           />
         )}
       </MapContainer>
