@@ -47,7 +47,7 @@ export default function PlaceDetail() {
       .select("id")
       .eq("user_id", user!.id)
       .eq("place_id", id)
-      .single();
+      .maybeSingle();
 
     setIsFavorite(!!data);
   };
